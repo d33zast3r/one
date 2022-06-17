@@ -1,69 +1,78 @@
 package com.tkroman.kpi.y2022.l1
 
-enum Optional[+A]:
-  case None
-  case Some(x: A)
+import scala.annotation.tailrec
+import scala.collection.mutable
 
-def fold[A, B](a: Optional[A], z: B, f: (B, A) => B) =
-  a match {
-    case Optional.None => z
-    case Optional.Some(x) => f(z, x)
-  }
+enum MyList[+A]:
+  case MyNil
+  case MyCons(hd: A, tl: MyList[A])
 
-enum Tree[+A]:
-  case Branch(l: Tree[A], r: Tree[A])
-  case Leaf(a: A)
+  override def toString: String =
+    @scala.annotation.tailrec
+    def go(sb: StringBuilder, as: MyList[A]): String = {
+      as match {
+        case MyNil =>
+          sb.result
+        case MyCons(h, t) =>
+          go(
+            sb
+              .append(h)
+              .append(if t == MyNil then "]" else ", "),
+            t
+          )
+      }
+    }
+    go(new StringBuilder("["), this)
 
-enum Set[+A]:
-  case Empty
-  case NonEmpty private (a: A, rest: Set[A])
-object Set:
-  def makeSet[A](xs: A*): Set[A] = ???
+object MyList:
+  def apply[A](xs: A*): MyList[A] = of(xs*)
+  def of[A](xs: A*): MyList[A] =
+    xs.foldRight(MyNil: MyList[A]) { case (x, acc) => MyCons(x, acc) }
 
-case class Bag[A] private (private val map: Map[A, Int])
-object Bag:
-  def makeBag[A](xs: A*): Bag[A] = ???
+import MyList.*
 
-// https://en.wikipedia.org/wiki/Binary_search_tree
-case class BSTree private (l: Option[BSTree], r: Option[BSTree], v: Int)
-object BSTree:
-  def makeBst(xs: Int*): BSTree = ???
+def split[A](xs: MyList[A], a: A): MyList[MyList[A]] =
+  @tailrec
+  def reverse[A](xs: MyList[A], temp: MyList[A] = MyNil): MyList[A] =
+    xs match
+      case MyNil => temp
+      case MyCons(hd, tl) => reverse(tl, MyCons(hd, temp))
+  def go(xs: MyList[A], a: A, temp: MyList[A]): MyList[MyList[A]] =
+    xs match
+      case MyNil => MyCons(temp, MyNil)
+      case MyCons(hd, tl) =>
+        if (hd == a)
+          MyCons(reverse(temp), go(tl, a, MyNil))
+        else
+          go(tl, a, MyCons(hd, temp))
+  xs match
+    case MyNil => MyNil
+    case MyCons(hd, tl) => go(xs, a, MyNil)
 
-enum List[+A]:
-  case Nil
-  case Cons(hd: A, tl: List[A])
+def join[A](xs: MyList[MyList[A]], sep: A): MyList[A] =
+  xs match
+    case MyNil => MyNil
+    case MyCons(MyNil, MyNil) => MyNil
+    case MyCons(MyNil, tl) => MyCons(sep, join(tl, sep))
+    case MyCons(MyCons(hd, tl), tail) => MyCons(hd, join(MyCons(tl, tail), sep))
 
-enum IntOpCode:
-  case Add, Mul
+def replaceWhere[A](xs: MyList[A], f: A => Option[A]): MyList[A] =
+  xs match
+    case MyNil => MyNil
+    case MyCons(hd, tl) =>
+      val opt = f(hd)
+      opt match
+        case None => MyCons(hd, replaceWhere(tl, f))
+        case Some(a) => MyCons(a, replaceWhere(tl, f))
 
-enum BoolOpCode:
-  case And, Or
+def dropWhere[A](xs: MyList[A], p: A => Boolean): MyList[A] =
+  xs match
+    case MyNil => MyNil
+    case MyCons(hd, tl) =>
+      if (p(hd))
+        dropWhere(tl, p)
+      else
+        MyCons(hd, dropWhere(tl, p))
 
-enum IntExpr:
-  case Lit(n: Int)
-  case Op(opCode: IntOpCode, l: IntExpr, r: IntExpr)
-
-enum BoolExpr:
-  case Lit(b: Boolean)
-  case Op(opCode: BoolOpCode, l: BoolExpr, r: BoolExpr)
-
-enum Nat:
-  case Zero
-  case Succ(n: Nat)
-
-case class Rational(num: Int, denom: Int)
-
-enum Compared:
-  case Lt, Gt, Eq // < > =
-
-enum RecEntry[A]:
-  case Flat(a: A)
-  case Nested(as: List[RecEntry[A]])
-
-// NOTE: do not use this to demo the results.
-// Use unit-tests instead
-@main def run() =
-  println("Hello")
-
-
-
+@main def run(): Unit =
+  println(split(MyList(21,1,2,1,5,4,1), 1))
