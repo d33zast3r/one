@@ -75,4 +75,4 @@ def dropWhere[A](xs: MyList[A], p: A => Boolean): MyList[A] =
         MyCons(hd, dropWhere(tl, p))
 
 @main def run(): Unit =
-  println(split(MyList(21,1,2,1,5,4,1), 1))
+  
